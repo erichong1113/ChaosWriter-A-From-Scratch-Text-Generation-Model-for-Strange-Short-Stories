@@ -8,6 +8,5 @@ This is the first version of the repo. It currently includes:
 
 - dataset loading
 - simple text preprocessing
-- LSTM language model
 - basic training script
 - basic generation script
