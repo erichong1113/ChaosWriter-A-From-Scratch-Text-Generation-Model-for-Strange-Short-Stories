@@ -1,3 +1,4 @@
+import argparse
 import torch
 from model import LSTMStoryModel
 
@@ -6,6 +7,10 @@ def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=
     device = next(model.parameters()).device
 
     ids = [stoi[ch] for ch in start_text if ch in stoi]
+
+    if len(ids) == 0:
+        raise ValueError("The prompt does not contain any known characters.")
+
     x = torch.tensor([ids], dtype=torch.long).to(device)
 
     model.eval()
@@ -18,7 +23,6 @@ def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=
             probs = torch.softmax(next_logits, dim=-1)
 
             next_id = torch.multinomial(probs, num_samples=1)
-
             x = torch.cat([x, next_id], dim=1)
 
     output_ids = x[0].tolist()
@@ -26,6 +30,28 @@ def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Generate a short story with ChaosWriter.")
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        default="A student finds a notebook that writes back.",
+        help="Writing prompt for the model."
+    )
+    parser.add_argument(
+        "--max_chars",
+        type=int,
+        default=500,
+        help="Maximum number of characters to generate."
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.8,
+        help="Sampling temperature. Higher values make output more random."
+    )
+
+    args = parser.parse_args()
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     checkpoint = torch.load("chaoswriter_lstm.pt", map_location=device)
@@ -33,12 +59,28 @@ def main():
     stoi = checkpoint["stoi"]
     itos = checkpoint["itos"]
 
-    model = LSTMStoryModel(vocab_size=len(stoi)).to(device)
+    model_config = checkpoint.get("config", {})
+
+    model = LSTMStoryModel(
+        vocab_size=len(stoi),
+        embed_dim=model_config.get("embed_dim", 128),
+        hidden_dim=model_config.get("hidden_dim", 256),
+        num_layers=model_config.get("num_layers", 2)
+    ).to(device)
+
     model.load_state_dict(checkpoint["model_state"])
 
-    prompt = "Prompt: A student finds a notebook that writes back.\nStory:"
-    output = generate_text(model, prompt, stoi, itos)
+    formatted_prompt = f"Prompt: {args.prompt}\nStory:"
+    output = generate_text(
+        model,
+        formatted_prompt,
+        stoi,
+        itos,
+        max_new_chars=args.max_chars,
+        temperature=args.temperature
+    )
 
+    print("\nGenerated Story:\n")
     print(output)
 
 
