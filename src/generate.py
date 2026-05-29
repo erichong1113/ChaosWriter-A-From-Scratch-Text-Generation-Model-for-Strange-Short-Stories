@@ -31,23 +31,33 @@ def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a short story with ChaosWriter.")
+
     parser.add_argument(
         "--prompt",
         type=str,
         default="A student finds a notebook that writes back.",
         help="Writing prompt for the model."
     )
+
     parser.add_argument(
         "--max_chars",
         type=int,
         default=500,
         help="Maximum number of characters to generate."
     )
+
     parser.add_argument(
         "--temperature",
         type=float,
         default=0.8,
         help="Sampling temperature. Higher values make output more random."
+    )
+
+    parser.add_argument(
+        "--output_file",
+        type=str,
+        default=None,
+        help="Optional file path to save the generated story."
     )
 
     args = parser.parse_args()
@@ -71,6 +81,7 @@ def main():
     model.load_state_dict(checkpoint["model_state"])
 
     formatted_prompt = f"Prompt: {args.prompt}\nStory:"
+
     output = generate_text(
         model,
         formatted_prompt,
@@ -82,6 +93,12 @@ def main():
 
     print("\nGenerated Story:\n")
     print(output)
+
+    if args.output_file:
+        with open(args.output_file, "w", encoding="utf-8") as f:
+            f.write(output)
+
+        print(f"\nGenerated story saved to {args.output_file}")
 
 
 if __name__ == "__main__":
