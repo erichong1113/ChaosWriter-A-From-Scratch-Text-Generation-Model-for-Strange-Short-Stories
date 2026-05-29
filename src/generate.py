@@ -4,6 +4,20 @@ from model import LSTMStoryModel
 
 
 def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=0.8):
+    """
+    Generate text from a trained ChaosWriter model.
+
+    Args:
+        model: Trained LSTMStoryModel.
+        start_text: Initial prompt text.
+        stoi: Character-to-index vocabulary.
+        itos: Index-to-character vocabulary.
+        max_new_chars: Number of new characters to generate.
+        temperature: Controls randomness. Higher values make output more random.
+
+    Returns:
+        A generated text string.
+    """
     device = next(model.parameters()).device
 
     ids = [stoi[ch] for ch in start_text if ch in stoi]
@@ -27,7 +41,6 @@ def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=
 
     output_ids = x[0].tolist()
     return "".join([itos[i] for i in output_ids])
-
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a short story with ChaosWriter.")
