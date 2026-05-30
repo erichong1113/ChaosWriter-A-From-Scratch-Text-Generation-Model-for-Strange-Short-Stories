@@ -12,7 +12,10 @@ def train():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     print("Loading dataset...")
-    text = load_writing_prompts_sample(max_examples=config.MAX_EXAMPLES)
+    text = load_writing_prompts_sample(
+    max_examples=config.MAX_EXAMPLES,
+    max_story_chars=config.MAX_STORY_CHARS
+)
 
     print("Building vocabulary...")
     vocab = CharVocab(text)

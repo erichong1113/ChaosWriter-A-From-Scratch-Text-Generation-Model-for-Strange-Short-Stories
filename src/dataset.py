@@ -2,6 +2,8 @@ from datasets import load_dataset
 import torch
 from torch.utils.data import Dataset
 
+from preprocess import format_prompt_story
+
 
 class CharVocab:
     def __init__(self, text):
@@ -32,18 +34,21 @@ class StoryDataset(Dataset):
         return x, y
 
 
-def load_writing_prompts_sample(max_examples=1000):
+def load_writing_prompts_sample(max_examples=1000, max_story_chars=2000):
     dataset = load_dataset("euclaise/writingprompts", split="train")
 
     texts = []
+
     for i, row in enumerate(dataset):
         if i >= max_examples:
             break
 
-        prompt = row["prompt"]
-        story = row["story"]
+        text = format_prompt_story(
+            prompt=row["prompt"],
+            story=row["story"],
+            max_story_chars=max_story_chars
+        )
 
-        text = f"Prompt: {prompt}\nStory: {story}\n\n"
         texts.append(text)
 
     return "".join(texts)

@@ -15,3 +15,4 @@ LEARNING_RATE = 0.001
 
 MODEL_PATH = "chaoswriter_lstm.pt"
 LOG_PATH = "training_log.txt"
+MAX_STORY_CHARS = 2000
