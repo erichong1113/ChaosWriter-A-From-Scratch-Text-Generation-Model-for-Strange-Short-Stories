@@ -77,7 +77,7 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    checkpoint = torch.load("chaoswriter_lstm.pt", map_location=device)
+    checkpoint = torch.load("chaoswriter_best.pt", map_location=device)
 
     stoi = checkpoint["stoi"]
     itos = checkpoint["itos"]

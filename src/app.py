@@ -6,8 +6,7 @@ from model import LSTMStoryModel
 from generate import generate_text
 
 
-MODEL_PATH = "chaoswriter_lstm.pt"
-
+MODEL_PATH = "chaoswriter_best.pt"
 
 @st.cache_resource
 def load_model():
