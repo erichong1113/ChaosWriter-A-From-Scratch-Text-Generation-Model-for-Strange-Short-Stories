@@ -1,3 +1,4 @@
+import argparse
 import os
 import torch
 
@@ -7,6 +8,45 @@ from generate import generate_text
 
 
 OUTPUT_FILE = "outputs/temperature_comparison.txt"
+DEFAULT_PROMPT = "A student discovers that the school library is alive."
+DEFAULT_TEMPERATURES = [0.4, 0.7, 1.0, 1.3]
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Compare ChaosWriter outputs across sampling temperatures."
+    )
+
+    parser.add_argument(
+        "--prompt",
+        type=str,
+        default=DEFAULT_PROMPT,
+        help="Story prompt to use for every temperature.",
+    )
+
+    parser.add_argument(
+        "--temperatures",
+        type=float,
+        nargs="+",
+        default=DEFAULT_TEMPERATURES,
+        help="One or more sampling temperatures to compare.",
+    )
+
+    parser.add_argument(
+        "--max_chars",
+        type=int,
+        default=600,
+        help="Maximum number of generated characters per temperature.",
+    )
+
+    parser.add_argument(
+        "--output_file",
+        type=str,
+        default=OUTPUT_FILE,
+        help="File path for saving the comparison report.",
+    )
+
+    return parser.parse_args()
 
 
 def load_model():
@@ -32,16 +72,20 @@ def load_model():
 
 
 def main():
+    args = parse_args()
+
     if not os.path.exists(config.BEST_MODEL_PATH):
         raise FileNotFoundError(
             f"Model checkpoint not found: {config.BEST_MODEL_PATH}. "
             "Please train the model first."
         )
 
-    os.makedirs("outputs", exist_ok=True)
+    output_dir = os.path.dirname(args.output_file)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
-    prompt = "A student discovers that the school library is alive."
-    temperatures = [0.4, 0.7, 1.0, 1.3]
+    prompt = args.prompt
+    temperatures = args.temperatures
 
     model, stoi, itos = load_model()
 
@@ -55,7 +99,7 @@ def main():
             start_text=formatted_prompt,
             stoi=stoi,
             itos=itos,
-            max_new_chars=600,
+            max_new_chars=args.max_chars,
             temperature=temperature,
         )
 
@@ -69,10 +113,10 @@ def main():
         print(result)
         results.append(result)
 
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+    with open(args.output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(results))
 
-    print(f"Temperature comparison saved to {OUTPUT_FILE}")
+    print(f"Temperature comparison saved to {args.output_file}")
 
 
 if __name__ == "__main__":
