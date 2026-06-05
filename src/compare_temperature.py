@@ -12,6 +12,20 @@ DEFAULT_PROMPT = "A student discovers that the school library is alive."
 DEFAULT_TEMPERATURES = [0.4, 0.7, 1.0, 1.3]
 
 
+def positive_float(value):
+    parsed_value = float(value)
+    if parsed_value <= 0:
+        raise argparse.ArgumentTypeError("temperature must be greater than 0")
+    return parsed_value
+
+
+def positive_int(value):
+    parsed_value = int(value)
+    if parsed_value <= 0:
+        raise argparse.ArgumentTypeError("max_chars must be greater than 0")
+    return parsed_value
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Compare ChaosWriter outputs across sampling temperatures."
@@ -26,7 +40,7 @@ def parse_args():
 
     parser.add_argument(
         "--temperatures",
-        type=float,
+        type=positive_float,
         nargs="+",
         default=DEFAULT_TEMPERATURES,
         help="One or more sampling temperatures to compare.",
@@ -34,7 +48,7 @@ def parse_args():
 
     parser.add_argument(
         "--max_chars",
-        type=int,
+        type=positive_int,
         default=600,
         help="Maximum number of generated characters per temperature.",
     )
