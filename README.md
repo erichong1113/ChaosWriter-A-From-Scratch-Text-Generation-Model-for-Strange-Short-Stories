@@ -30,5 +30,5 @@ python src/generate.py --prompt "A student finds a notebook that writes back."
 Compare different sampling temperatures:
 
 ```bash
-python src/compare_temperature.py --temperatures 0.4 0.8 1.2
+python src/compare_temperature.py --temperatures 0.4 0.8 1.2 --seed 42
 ```
