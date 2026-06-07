@@ -11,6 +11,13 @@ class CharVocab:
         self.stoi = {ch: i for i, ch in enumerate(chars)}
         self.itos = {i: ch for ch, i in self.stoi.items()}
 
+    @classmethod
+    def from_mappings(cls, stoi, itos):
+        vocab = cls.__new__(cls)
+        vocab.stoi = dict(stoi)
+        vocab.itos = dict(itos)
+        return vocab
+
     def encode(self, text):
         return [self.stoi[ch] for ch in text if ch in self.stoi]
 

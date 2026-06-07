@@ -32,3 +32,9 @@ Compare different sampling temperatures:
 ```bash
 python src/compare_temperature.py --temperatures 0.4 0.8 1.2 --seed 42
 ```
+
+Run the test suite:
+
+```bash
+python -m unittest discover -s tests -v
+```

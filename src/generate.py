@@ -1,6 +1,8 @@
 import argparse
-import torch
-from model import LSTMStoryModel
+import os
+
+import config
+from checkpoint import load_story_model
 
 
 def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=0.8):
@@ -75,23 +77,7 @@ def main():
 
     args = parser.parse_args()
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    checkpoint = torch.load("chaoswriter_best.pt", map_location=device)
-
-    stoi = checkpoint["stoi"]
-    itos = checkpoint["itos"]
-
-    model_config = checkpoint.get("config", {})
-
-    model = LSTMStoryModel(
-        vocab_size=len(stoi),
-        embed_dim=model_config.get("embed_dim", 128),
-        hidden_dim=model_config.get("hidden_dim", 256),
-        num_layers=model_config.get("num_layers", 2)
-    ).to(device)
-
-    model.load_state_dict(checkpoint["model_state"])
+    model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
 
     formatted_prompt = f"Prompt: {args.prompt}\nStory:"
 
@@ -108,6 +94,10 @@ def main():
     print(output)
 
     if args.output_file:
+        output_dir = os.path.dirname(args.output_file)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+
         with open(args.output_file, "w", encoding="utf-8") as f:
             f.write(output)
 

@@ -1,35 +1,16 @@
-import os
-import torch
 import streamlit as st
 
-from model import LSTMStoryModel
+import config
+from checkpoint import load_story_model
 from generate import generate_text
 
 
-MODEL_PATH = "chaoswriter_best.pt"
-
 @st.cache_resource
 def load_model():
-    if not os.path.exists(MODEL_PATH):
+    try:
+        model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
+    except FileNotFoundError:
         return None, None, None
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    checkpoint = torch.load(MODEL_PATH, map_location=device)
-
-    stoi = checkpoint["stoi"]
-    itos = checkpoint["itos"]
-    model_config = checkpoint.get("config", {})
-
-    model = LSTMStoryModel(
-        vocab_size=len(stoi),
-        embed_dim=model_config.get("embed_dim", 128),
-        hidden_dim=model_config.get("hidden_dim", 256),
-        num_layers=model_config.get("num_layers", 2)
-    ).to(device)
-
-    model.load_state_dict(checkpoint["model_state"])
-    model.eval()
 
     return model, stoi, itos
 

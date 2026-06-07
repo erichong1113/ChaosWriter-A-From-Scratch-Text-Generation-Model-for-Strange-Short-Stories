@@ -3,7 +3,7 @@ import os
 import torch
 
 import config
-from model import LSTMStoryModel
+from checkpoint import load_story_model
 from generate import generate_text
 
 
@@ -78,36 +78,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def load_model():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    checkpoint = torch.load(config.BEST_MODEL_PATH, map_location=device)
-
-    stoi = checkpoint["stoi"]
-    itos = checkpoint["itos"]
-    model_config = checkpoint.get("config", {})
-
-    model = LSTMStoryModel(
-        vocab_size=len(stoi),
-        embed_dim=model_config.get("embed_dim", config.EMBED_DIM),
-        hidden_dim=model_config.get("hidden_dim", config.HIDDEN_DIM),
-        num_layers=model_config.get("num_layers", config.NUM_LAYERS),
-    ).to(device)
-
-    model.load_state_dict(checkpoint["model_state"])
-    model.eval()
-
-    return model, stoi, itos
-
-
 def main():
     args = parse_args()
-
-    if not os.path.exists(config.BEST_MODEL_PATH):
-        raise FileNotFoundError(
-            f"Model checkpoint not found: {config.BEST_MODEL_PATH}. "
-            "Please train the model first."
-        )
 
     output_dir = os.path.dirname(args.output_file)
     if output_dir:
@@ -120,7 +92,7 @@ def main():
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
 
-    model, stoi, itos = load_model()
+    model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
 
     results = [f"Random Seed: {args.seed}\n{'=' * 80}\n"]
 
