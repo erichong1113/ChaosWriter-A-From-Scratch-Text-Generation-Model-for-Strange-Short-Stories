@@ -1,37 +1,15 @@
 import argparse
 import os
-import torch
 
 import config
 from checkpoint import load_story_model
 from generate import generate_text
+from runtime import non_negative_int, positive_float, positive_int, set_random_seed
 
 
 OUTPUT_FILE = "outputs/temperature_comparison.txt"
 DEFAULT_PROMPT = "A student discovers that the school library is alive."
 DEFAULT_TEMPERATURES = [0.4, 0.7, 1.0, 1.3]
-DEFAULT_SEED = 42
-
-
-def positive_float(value):
-    parsed_value = float(value)
-    if parsed_value <= 0:
-        raise argparse.ArgumentTypeError("temperature must be greater than 0")
-    return parsed_value
-
-
-def positive_int(value):
-    parsed_value = int(value)
-    if parsed_value <= 0:
-        raise argparse.ArgumentTypeError("max_chars must be greater than 0")
-    return parsed_value
-
-
-def non_negative_int(value):
-    parsed_value = int(value)
-    if parsed_value < 0:
-        raise argparse.ArgumentTypeError("seed must be 0 or greater")
-    return parsed_value
 
 
 def parse_args():
@@ -71,7 +49,7 @@ def parse_args():
     parser.add_argument(
         "--seed",
         type=non_negative_int,
-        default=DEFAULT_SEED,
+        default=config.RANDOM_SEED,
         help="Random seed used to make generation reproducible.",
     )
 
@@ -88,9 +66,7 @@ def main():
     prompt = args.prompt
     temperatures = args.temperatures
 
-    torch.manual_seed(args.seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(args.seed)
+    set_random_seed(args.seed)
 
     model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
 

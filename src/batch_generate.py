@@ -1,12 +1,49 @@
+import argparse
 import os
 
 import config
 from checkpoint import load_story_model
 from generate import generate_text
+from runtime import non_negative_int, positive_float, positive_int, set_random_seed
 
 
 PROMPT_FILE = "sample_prompts.txt"
 OUTPUT_FILE = "outputs/batch_outputs.txt"
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Generate stories for every prompt in a text file."
+    )
+    parser.add_argument(
+        "--prompt_file",
+        default=PROMPT_FILE,
+        help="Text file containing one prompt per line.",
+    )
+    parser.add_argument(
+        "--output_file",
+        default=OUTPUT_FILE,
+        help="File path for saving generated stories.",
+    )
+    parser.add_argument(
+        "--max_chars",
+        type=positive_int,
+        default=600,
+        help="Maximum number of generated characters per prompt.",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=positive_float,
+        default=0.8,
+        help="Sampling temperature used for every prompt.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=non_negative_int,
+        default=config.RANDOM_SEED,
+        help="Random seed used to make generation reproducible.",
+    )
+    return parser.parse_args()
 
 
 def load_prompts(prompt_file):
@@ -17,15 +54,23 @@ def load_prompts(prompt_file):
 
 
 def main():
-    if not os.path.exists(PROMPT_FILE):
-        raise FileNotFoundError(f"Prompt file not found: {PROMPT_FILE}")
+    args = parse_args()
+    set_random_seed(args.seed)
 
-    os.makedirs("outputs", exist_ok=True)
+    if not os.path.exists(args.prompt_file):
+        raise FileNotFoundError(f"Prompt file not found: {args.prompt_file}")
+
+    output_dir = os.path.dirname(args.output_file)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
-    prompts = load_prompts(PROMPT_FILE)
+    prompts = load_prompts(args.prompt_file)
 
-    results = []
+    if not prompts:
+        raise ValueError("Prompt file does not contain any non-empty prompts.")
+
+    results = [f"Random Seed: {args.seed}\n{'=' * 80}\n"]
 
     for i, prompt in enumerate(prompts, start=1):
         formatted_prompt = f"Prompt: {prompt}\nStory:"
@@ -35,8 +80,8 @@ def main():
             start_text=formatted_prompt,
             stoi=stoi,
             itos=itos,
-            max_new_chars=600,
-            temperature=0.8,
+            max_new_chars=args.max_chars,
+            temperature=args.temperature,
         )
 
         result = (
@@ -49,10 +94,10 @@ def main():
         print(result)
         results.append(result)
 
-    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+    with open(args.output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(results))
 
-    print(f"Batch generation saved to {OUTPUT_FILE}")
+    print(f"Batch generation saved to {args.output_file}")
 
 
 if __name__ == "__main__":

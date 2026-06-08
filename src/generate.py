@@ -1,8 +1,11 @@
 import argparse
 import os
 
+import torch
+
 import config
 from checkpoint import load_story_model
+from runtime import non_negative_int, positive_float, positive_int, set_random_seed
 
 
 def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=0.8):
@@ -20,8 +23,12 @@ def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=
     Returns:
         A generated text string.
     """
-    device = next(model.parameters()).device
+    if max_new_chars <= 0:
+        raise ValueError("max_new_chars must be greater than 0.")
+    if temperature <= 0:
+        raise ValueError("temperature must be greater than 0.")
 
+    device = next(model.parameters()).device
     ids = [stoi[ch] for ch in start_text if ch in stoi]
 
     if len(ids) == 0:
@@ -56,14 +63,14 @@ def main():
 
     parser.add_argument(
         "--max_chars",
-        type=int,
+        type=positive_int,
         default=500,
         help="Maximum number of characters to generate."
     )
 
     parser.add_argument(
         "--temperature",
-        type=float,
+        type=positive_float,
         default=0.8,
         help="Sampling temperature. Higher values make output more random."
     )
@@ -75,7 +82,15 @@ def main():
         help="Optional file path to save the generated story."
     )
 
+    parser.add_argument(
+        "--seed",
+        type=non_negative_int,
+        default=config.RANDOM_SEED,
+        help="Random seed used to make generation reproducible."
+    )
+
     args = parser.parse_args()
+    set_random_seed(args.seed)
 
     model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
 

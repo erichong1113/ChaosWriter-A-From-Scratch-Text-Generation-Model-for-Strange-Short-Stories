@@ -1,11 +1,12 @@
 import math
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from dataset import CharVocab, StoryDataset, load_writing_prompts_sample
 from model import LSTMStoryModel
+from runtime import set_random_seed, split_dataset
 import config
 
 
@@ -35,6 +36,7 @@ def evaluate(model, dataloader, loss_fn, device):
 
 def train():
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    set_random_seed(config.RANDOM_SEED)
 
     print("Loading dataset...")
     text = load_writing_prompts_sample(
@@ -47,18 +49,19 @@ def train():
 
     full_dataset = StoryDataset(text, vocab, block_size=config.BLOCK_SIZE)
 
-    train_size = int(len(full_dataset) * config.TRAIN_SPLIT)
-    val_size = len(full_dataset) - train_size
-
-    train_dataset, val_dataset = random_split(
+    train_dataset, val_dataset = split_dataset(
         full_dataset,
-        [train_size, val_size]
+        train_fraction=config.TRAIN_SPLIT,
+        seed=config.RANDOM_SEED,
     )
+    train_size = len(train_dataset)
+    val_size = len(val_dataset)
 
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.BATCH_SIZE,
-        shuffle=True
+        shuffle=True,
+        generator=torch.Generator().manual_seed(config.RANDOM_SEED),
     )
 
     val_loader = DataLoader(
@@ -89,6 +92,7 @@ def train():
         log_file.write(f"Validation size: {val_size}\n")
         log_file.write(f"Block size: {config.BLOCK_SIZE}\n")
         log_file.write(f"Batch size: {config.BATCH_SIZE}\n")
+        log_file.write(f"Random seed: {config.RANDOM_SEED}\n")
         log_file.write(f"Model: LSTM\n\n")
 
         for epoch in range(config.EPOCHS):
@@ -141,7 +145,8 @@ def train():
                     "embed_dim": config.EMBED_DIM,
                     "hidden_dim": config.HIDDEN_DIM,
                     "num_layers": config.NUM_LAYERS,
-                    "block_size": config.BLOCK_SIZE
+                    "block_size": config.BLOCK_SIZE,
+                    "random_seed": config.RANDOM_SEED,
                 },
                 "epoch": epoch + 1,
                 "train_loss": avg_train_loss,
