@@ -3,7 +3,7 @@ import os
 
 import config
 from checkpoint import load_story_model
-from generate import generate_text
+from generate import build_anchored_prompt, generate_text
 from runtime import non_negative_int, positive_float, positive_int, set_random_seed
 
 
@@ -26,10 +26,10 @@ def parse_args():
         help="File path for saving generated stories.",
     )
     parser.add_argument(
-        "--max_chars",
+        "--max_tokens",
         type=positive_int,
-        default=600,
-        help="Maximum number of generated characters per prompt.",
+        default=200,
+        help="Maximum number of generated subword tokens per prompt.",
     )
     parser.add_argument(
         "--temperature",
@@ -64,7 +64,7 @@ def main():
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
-    model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
+    model, tokenizer, _ = load_story_model(config.BEST_MODEL_PATH)
     prompts = load_prompts(args.prompt_file)
 
     if not prompts:
@@ -73,14 +73,13 @@ def main():
     results = [f"Random Seed: {args.seed}\n{'=' * 80}\n"]
 
     for i, prompt in enumerate(prompts, start=1):
-        formatted_prompt = f"Prompt: {prompt}\nStory:"
+        formatted_prompt = build_anchored_prompt(prompt)
 
         story = generate_text(
             model=model,
             start_text=formatted_prompt,
-            stoi=stoi,
-            itos=itos,
-            max_new_chars=args.max_chars,
+            tokenizer=tokenizer,
+            max_new_tokens=args.max_tokens,
             temperature=args.temperature,
         )
 

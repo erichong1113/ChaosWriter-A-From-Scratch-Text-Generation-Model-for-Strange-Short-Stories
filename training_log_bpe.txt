@@ -1,0 +1,36 @@
+ChaosWriter Training Log
+Device: mps
+Examples: 10000
+Train size: 43253
+Validation size: 4806
+Block size: 128
+Batch size: 32
+Random seed: 42
+Tokenizer: sentencepiece
+Vocabulary size: 2000
+Model: LSTM
+
+Epoch 1/12 | Train Loss: 5.0869 | Train PPL: 161.88 | Val Loss: 4.4897 | Val PPL: 89.09
+New best model saved with Val Loss: 4.4897
+Epoch 2/12 | Train Loss: 4.2614 | Train PPL: 70.91 | Val Loss: 4.1093 | Val PPL: 60.90
+New best model saved with Val Loss: 4.1093
+Epoch 3/12 | Train Loss: 3.9987 | Train PPL: 54.53 | Val Loss: 3.9449 | Val PPL: 51.67
+New best model saved with Val Loss: 3.9449
+Epoch 4/12 | Train Loss: 3.8649 | Train PPL: 47.70 | Val Loss: 3.8532 | Val PPL: 47.14
+New best model saved with Val Loss: 3.8532
+Epoch 5/12 | Train Loss: 3.7800 | Train PPL: 43.82 | Val Loss: 3.7878 | Val PPL: 44.16
+New best model saved with Val Loss: 3.7878
+Epoch 6/12 | Train Loss: 3.7190 | Train PPL: 41.22 | Val Loss: 3.7484 | Val PPL: 42.45
+New best model saved with Val Loss: 3.7484
+Epoch 7/12 | Train Loss: 3.6723 | Train PPL: 39.34 | Val Loss: 3.7144 | Val PPL: 41.04
+New best model saved with Val Loss: 3.7144
+Epoch 8/12 | Train Loss: 3.6346 | Train PPL: 37.89 | Val Loss: 3.6878 | Val PPL: 39.96
+New best model saved with Val Loss: 3.6878
+Epoch 9/12 | Train Loss: 3.6031 | Train PPL: 36.71 | Val Loss: 3.6654 | Val PPL: 39.07
+New best model saved with Val Loss: 3.6654
+Epoch 10/12 | Train Loss: 3.5762 | Train PPL: 35.74 | Val Loss: 3.6467 | Val PPL: 38.35
+New best model saved with Val Loss: 3.6467
+Epoch 11/12 | Train Loss: 3.5525 | Train PPL: 34.90 | Val Loss: 3.6315 | Val PPL: 37.77
+New best model saved with Val Loss: 3.6315
+Epoch 12/12 | Train Loss: 3.5316 | Train PPL: 34.18 | Val Loss: 3.6217 | Val PPL: 37.40
+New best model saved with Val Loss: 3.6217

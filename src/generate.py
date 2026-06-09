@@ -8,48 +8,98 @@ from checkpoint import load_story_model
 from runtime import non_negative_int, positive_float, positive_int, set_random_seed
 
 
-def generate_text(model, start_text, stoi, itos, max_new_chars=500, temperature=0.8):
+SENTENCE_ENDINGS = ".!?"
+MAX_SENTENCE_COMPLETION_TOKENS = 40
+
+
+def build_anchored_prompt(prompt):
+    """Repeat the user's idea as the first sentence of the generated story."""
+    prompt = prompt.strip()
+    if not prompt:
+        raise ValueError("The prompt must not be empty.")
+
+    if prompt[-1] not in ".!?":
+        prompt = f"{prompt}."
+
+    return f"Prompt: {prompt}\nStory: {prompt}"
+
+
+def generate_text(
+    model,
+    start_text,
+    tokenizer,
+    max_new_tokens=200,
+    temperature=0.8,
+    finish_sentence=True,
+    max_completion_tokens=MAX_SENTENCE_COMPLETION_TOKENS,
+):
     """
     Generate text from a trained ChaosWriter model.
 
     Args:
         model: Trained LSTMStoryModel.
         start_text: Initial prompt text.
-        stoi: Character-to-index vocabulary.
-        itos: Index-to-character vocabulary.
-        max_new_chars: Number of new characters to generate.
+        tokenizer: Character or SentencePiece tokenizer.
+        max_new_tokens: Number of new tokens to generate.
         temperature: Controls randomness. Higher values make output more random.
+        finish_sentence: Continue briefly until the story reaches punctuation.
+        max_completion_tokens: Maximum extra tokens used to finish the sentence.
 
     Returns:
         A generated text string.
     """
-    if max_new_chars <= 0:
-        raise ValueError("max_new_chars must be greater than 0.")
+    if max_new_tokens <= 0:
+        raise ValueError("max_new_tokens must be greater than 0.")
     if temperature <= 0:
         raise ValueError("temperature must be greater than 0.")
+    if max_completion_tokens < 0:
+        raise ValueError("max_completion_tokens must not be negative.")
 
     device = next(model.parameters()).device
-    ids = [stoi[ch] for ch in start_text if ch in stoi]
+    ids = tokenizer.encode(start_text)
 
     if len(ids) == 0:
         raise ValueError("The prompt does not contain any known characters.")
 
-    x = torch.tensor([ids], dtype=torch.long).to(device)
+    x = torch.tensor([ids], dtype=torch.long, device=device)
+    output_ids = list(ids)
 
     model.eval()
 
     with torch.no_grad():
-        for _ in range(max_new_chars):
-            logits, _ = model(x)
+        logits, hidden = model(x)
+        token_limit = max_new_tokens
+        if finish_sentence:
+            token_limit += max_completion_tokens
 
+        for generated_count in range(token_limit):
             next_logits = logits[:, -1, :] / temperature
             probs = torch.softmax(next_logits, dim=-1)
 
             next_id = torch.multinomial(probs, num_samples=1)
-            x = torch.cat([x, next_id], dim=1)
+            output_ids.append(next_id.item())
+            logits, hidden = model(next_id, hidden)
 
-    output_ids = x[0].tolist()
-    return "".join([itos[i] for i in output_ids])
+            if generated_count + 1 < max_new_tokens:
+                continue
+
+            generated_text = tokenizer.decode(output_ids[len(ids):]).rstrip()
+            if not finish_sentence or generated_text.endswith(
+                tuple(SENTENCE_ENDINGS)
+            ):
+                break
+
+    output = tokenizer.decode(output_ids).rstrip()
+    if not finish_sentence or output.endswith(tuple(SENTENCE_ENDINGS)):
+        return output
+
+    prompt_text = tokenizer.decode(ids)
+    continuation = output[len(prompt_text):]
+    last_ending = max(continuation.rfind(mark) for mark in SENTENCE_ENDINGS)
+    if last_ending >= 0:
+        return f"{prompt_text}{continuation[:last_ending + 1]}".rstrip()
+
+    return f"{output}."
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a short story with ChaosWriter.")
@@ -62,10 +112,10 @@ def main():
     )
 
     parser.add_argument(
-        "--max_chars",
+        "--max_tokens",
         type=positive_int,
-        default=500,
-        help="Maximum number of characters to generate."
+        default=200,
+        help="Maximum number of subword tokens to generate."
     )
 
     parser.add_argument(
@@ -92,16 +142,15 @@ def main():
     args = parser.parse_args()
     set_random_seed(args.seed)
 
-    model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
+    model, tokenizer, _ = load_story_model(config.BEST_MODEL_PATH)
 
-    formatted_prompt = f"Prompt: {args.prompt}\nStory:"
+    formatted_prompt = build_anchored_prompt(args.prompt)
 
     output = generate_text(
         model,
         formatted_prompt,
-        stoi,
-        itos,
-        max_new_chars=args.max_chars,
+        tokenizer,
+        max_new_tokens=args.max_tokens,
         temperature=args.temperature
     )
 

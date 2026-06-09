@@ -3,26 +3,10 @@ import torch
 from torch.utils.data import Dataset
 
 from preprocess import format_prompt_story
+from tokenizer import CharTokenizer
 
 
-class CharVocab:
-    def __init__(self, text):
-        chars = sorted(list(set(text)))
-        self.stoi = {ch: i for i, ch in enumerate(chars)}
-        self.itos = {i: ch for ch, i in self.stoi.items()}
-
-    @classmethod
-    def from_mappings(cls, stoi, itos):
-        vocab = cls.__new__(cls)
-        vocab.stoi = dict(stoi)
-        vocab.itos = dict(itos)
-        return vocab
-
-    def encode(self, text):
-        return [self.stoi[ch] for ch in text if ch in self.stoi]
-
-    def decode(self, ids):
-        return "".join([self.itos[i] for i in ids])
+CharVocab = CharTokenizer
 
 
 class StoryDataset(Dataset):
@@ -32,10 +16,11 @@ class StoryDataset(Dataset):
         self.data = torch.tensor(vocab.encode(text), dtype=torch.long)
 
     def __len__(self):
-        return len(self.data) - self.block_size
+        return max(0, (len(self.data) - 1) // self.block_size)
 
     def __getitem__(self, idx):
-        chunk = self.data[idx : idx + self.block_size + 1]
+        start = idx * self.block_size
+        chunk = self.data[start : start + self.block_size + 1]
         x = chunk[:-1]
         y = chunk[1:]
         return x, y

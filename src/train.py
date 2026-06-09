@@ -4,9 +4,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from dataset import CharVocab, StoryDataset, load_writing_prompts_sample
+from checkpoint import get_device
+from dataset import StoryDataset, load_writing_prompts_sample
 from model import LSTMStoryModel
 from runtime import set_random_seed, split_dataset
+from tokenizer import CharTokenizer, SentencePieceTokenizer
 import config
 
 
@@ -35,19 +37,23 @@ def evaluate(model, dataloader, loss_fn, device):
 
 
 def train():
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = get_device()
     set_random_seed(config.RANDOM_SEED)
 
+    print(f"Using device: {device}")
     print("Loading dataset...")
     text = load_writing_prompts_sample(
         max_examples=config.MAX_EXAMPLES,
         max_story_chars=config.MAX_STORY_CHARS
     )
 
-    print("Building vocabulary...")
-    vocab = CharVocab(text)
+    print(f"Building {config.TOKENIZER_TYPE} tokenizer...")
+    if config.TOKENIZER_TYPE == "sentencepiece":
+        tokenizer = SentencePieceTokenizer.train(text, config.VOCAB_SIZE)
+    else:
+        tokenizer = CharTokenizer(text=text)
 
-    full_dataset = StoryDataset(text, vocab, block_size=config.BLOCK_SIZE)
+    full_dataset = StoryDataset(text, tokenizer, block_size=config.BLOCK_SIZE)
 
     train_dataset, val_dataset = split_dataset(
         full_dataset,
@@ -71,7 +77,7 @@ def train():
     )
 
     model = LSTMStoryModel(
-        vocab_size=len(vocab.stoi),
+        vocab_size=tokenizer.vocab_size,
         embed_dim=config.EMBED_DIM,
         hidden_dim=config.HIDDEN_DIM,
         num_layers=config.NUM_LAYERS
@@ -93,6 +99,8 @@ def train():
         log_file.write(f"Block size: {config.BLOCK_SIZE}\n")
         log_file.write(f"Batch size: {config.BATCH_SIZE}\n")
         log_file.write(f"Random seed: {config.RANDOM_SEED}\n")
+        log_file.write(f"Tokenizer: {tokenizer.tokenizer_type}\n")
+        log_file.write(f"Vocabulary size: {tokenizer.vocab_size}\n")
         log_file.write(f"Model: LSTM\n\n")
 
         for epoch in range(config.EPOCHS):
@@ -139,8 +147,6 @@ def train():
 
             checkpoint = {
                 "model_state": model.state_dict(),
-                "stoi": vocab.stoi,
-                "itos": vocab.itos,
                 "config": {
                     "embed_dim": config.EMBED_DIM,
                     "hidden_dim": config.HIDDEN_DIM,
@@ -153,6 +159,7 @@ def train():
                 "val_loss": val_loss,
                 "val_perplexity": val_perplexity
             }
+            checkpoint.update(tokenizer.checkpoint_data())
 
             torch.save(checkpoint, config.MODEL_PATH)
 

@@ -2,18 +2,18 @@ import streamlit as st
 
 import config
 from checkpoint import load_story_model
-from generate import generate_text
+from generate import build_anchored_prompt, generate_text
 from runtime import set_random_seed
 
 
 @st.cache_resource
 def load_model():
     try:
-        model, stoi, itos, _ = load_story_model(config.BEST_MODEL_PATH)
+        model, tokenizer, _ = load_story_model(config.BEST_MODEL_PATH)
     except (FileNotFoundError, RuntimeError, ValueError) as error:
-        return None, None, None, str(error)
+        return None, None, str(error)
 
-    return model, stoi, itos, None
+    return model, tokenizer, None
 
 
 st.set_page_config(
@@ -23,9 +23,9 @@ st.set_page_config(
 )
 
 st.title("ChaosWriter")
-st.caption("A from-scratch character-level LSTM chatbot for strange short stories.")
+st.caption("A from-scratch subword LSTM chatbot for strange short stories.")
 
-model, stoi, itos, model_error = load_model()
+model, tokenizer, model_error = load_model()
 
 if model is None:
     st.warning("No usable trained model found. Run `python src/train.py` first.")
@@ -43,19 +43,19 @@ else:
     with st.sidebar:
         st.header("Generation")
 
-        max_chars = st.slider(
+        max_tokens = st.slider(
             "Story length",
-            min_value=100,
-            max_value=1200,
-            value=500,
-            step=100,
+            min_value=50,
+            max_value=400,
+            value=200,
+            step=50,
         )
 
         temperature = st.slider(
             "Creativity",
             min_value=0.2,
             max_value=1.5,
-            value=0.8,
+            value=0.5,
             step=0.1,
         )
 
@@ -81,19 +81,20 @@ else:
         with st.chat_message("user"):
             st.write(prompt)
 
-        formatted_prompt = f"Prompt: {prompt}\nStory:"
+        formatted_prompt = build_anchored_prompt(prompt)
 
         with st.chat_message("assistant"):
             with st.spinner("Generating story..."):
                 set_random_seed(int(seed))
-                story = generate_text(
+                generated_text = generate_text(
                     model=model,
                     start_text=formatted_prompt,
-                    stoi=stoi,
-                    itos=itos,
-                    max_new_chars=max_chars,
+                    tokenizer=tokenizer,
+                    max_new_tokens=max_tokens,
                     temperature=temperature,
                 )
+                _, marker, continuation = generated_text.partition("Story:")
+                story = continuation.strip() if marker else generated_text
             st.write(story)
 
         st.session_state.messages.append(
