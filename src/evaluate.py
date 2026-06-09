@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from checkpoint import get_device, load_story_model
-from dataset import CharVocab, StoryDataset, load_writing_prompts_sample
+from dataset import StoryDataset, load_writing_prompts_sample
 from runtime import set_random_seed, split_dataset
 import config
 
@@ -14,7 +14,7 @@ def evaluate_model():
     set_random_seed(config.RANDOM_SEED)
 
     print("Loading checkpoint...")
-    model, stoi, itos, checkpoint = load_story_model(
+    model, tokenizer, checkpoint = load_story_model(
         config.BEST_MODEL_PATH,
         device=device,
     )
@@ -29,8 +29,11 @@ def evaluate_model():
         max_story_chars=config.MAX_STORY_CHARS
     )
 
-    vocab = CharVocab.from_mappings(stoi, itos)
-    dataset = StoryDataset(text, vocab, block_size=config.BLOCK_SIZE)
+    block_size = checkpoint.get("config", {}).get(
+        "block_size",
+        config.BLOCK_SIZE,
+    )
+    dataset = StoryDataset(text, tokenizer, block_size=block_size)
 
     _, val_dataset = split_dataset(
         dataset,

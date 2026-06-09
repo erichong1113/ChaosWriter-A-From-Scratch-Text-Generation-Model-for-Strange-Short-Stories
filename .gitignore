@@ -7,3 +7,5 @@ venv/
 outputs/
 *.pt
 training_log.txt
+config.bat
+node_modules

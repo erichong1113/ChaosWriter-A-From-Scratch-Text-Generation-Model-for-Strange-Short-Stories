@@ -2,3 +2,4 @@ torch
 datasets
 tqdm
 streamlit
+sentencepiece
